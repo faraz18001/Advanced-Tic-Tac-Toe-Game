@@ -1,187 +1,268 @@
 
-PLAYERS = ['X', 'O', 'A']  # Define the three players - X is human, O and A are AI
-EMPTY = '_'  # Symbol for empty cell
+# It's like the regular game but with 3 players which makes it way more fun
+# The board size grows every time someone wins (until it hits 8x8) - pretty neat right?
 
-def create_board():
-    """Create an empty 3x3 board"""
-    return [[EMPTY for _ in range(3)] for _ in range(3)]
+def create_board(size):
+    # Making an empty board... nothing fancy, just a bunch of spaces
+    # It's like setting up a blank canvas, but for X's and O's
+    board = []
+    for _ in range(size):#literally created a nested matrix here!.
+        row = []
+        for _ in range(size):
+            row.append(' ')
+        board.append(row)
+    return board
 
 def print_board(board):
-    """Print the current state of the board in a readable format"""
-    for row in board:
-        # Join cells with | and print each row
-        print(' | '.join(row))
-        # Print separator line
-        print('-' * 9)
-
-def is_moves_left(board):
-    """Check if there are any empty cells left on the board"""
-    # Iterate through each cell and return True if any empty cell found
-    return any(EMPTY in row for row in board)
-
-def make_move(board, position, player):
-    """Make a move on the board and return the new board state"""
-    # Create a new board (to maintain immutability)
-    new_board = [row[:] for row in board]
-    row, col = position
-    new_board[row][col] = player
-    return new_board
-
-def is_valid_move(board, position):
-    """Check if a move is valid (cell is empty and within bounds)"""
-    row, col = position
-    # Check if position is within bounds and cell is empty
-    return (0 <= row <= 2 and 
-            0 <= col <= 2 and 
-            board[row][col] == EMPTY)
-
-def evaluate_board(board, player_index):
-    """Evaluate the board state for the given player
-    Returns:
-        10 if the player wins
-        -10 if another player wins
-        0 for no winner"""
+    # Printing out the board so humans can actually see what's going on
+    # Added column numbers at the top and row numbers on the side
+    # cuz nobody wants to count squares manually, right?
+    size = len(board)
     
-    # Check rows for a win
-    for row in board:
-        if row[0] == row[1] == row[2] != EMPTY:
-            return 10 if row[0] == PLAYERS[player_index] else -10
+    # Print column numbers at the top
+    print("\n   ", end="")
+    for col in range(size):
+        print(f"  {col} ", end="")
+    print("  (Columns)")
     
-    # Check columns for a win
-    for col in range(3):
-        if board[0][col] == board[1][col] == board[2][col] != EMPTY:
-            return 10 if board[0][col] == PLAYERS[player_index] else -10
+    # Print the separator line
+    print("   " + "----" * size)
+    
+    # Print each row with row numbers
+    row_num = 0
+    for row in board:
+        print(f"{row_num} | ", end="")
+        for cell in row:
+            print(f" {cell} |", end="")
+        print(f" (Row {row_num})")
+        print("   " + "----" * size)
+        row_num += 1
+
+def is_winner(board, player):
+    # Checking if someone won... boring but necessary
+    # Looking for three-in-a-row anywhere on the board
+    size = len(board)
+    
+    # Check rows - like reading a book left to right
+    for row in range(size):
+        winner = True
+        for col in range(size):
+            if board[row][col] != player:
+                winner = False
+                break
+        if winner:
+            return True
+    
+    # Check columns - like reading a book top to bottom
+    for col in range(size):
+        winner = True
+        for row in range(size):
+            if board[row][col] != player:
+                winner = False
+                break
+        if winner:
+            return True
     
     # Check diagonal from top-left to bottom-right
-    if board[0][0] == board[1][1] == board[2][2] != EMPTY:
-        return 10 if board[0][0] == PLAYERS[player_index] else -10
+    # Like drawing a line from your top-left pocket to your right shoe
+    winner = True
+    for i in range(size):
+        if board[i][i] != player:
+            winner = False
+            break
+    if winner:
+        return True
     
     # Check diagonal from top-right to bottom-left
-    if board[0][2] == board[1][1] == board[2][0] != EMPTY:
-        return 10 if board[0][2] == PLAYERS[player_index] else -10
+    # Like drawing a line from your top-right pocket to your left shoe
+    winner = True
+    for i in range(size):
+        if board[i][size - 1 - i] != player:
+            winner = False
+            break
+    if winner:
+        return True
     
-    # Return 0 if no winner
-    return 0
+    return False
 
-def minimax(board, depth, player_index, is_max):
-    """Implement the minimax algorithm for three players
-    Args:
-        board: Current game board
-        depth: Current depth in game tree
-        player_index: Current player's index (0, 1, or 2)
-        is_max: True if maximizing player, False if minimizing"""
-    
-    # Get the board evaluation for current player
-    score = evaluate_board(board, player_index)
-    
-    # Return score if this is a terminal state
-    if score == 10:  # Current player wins
-        return score - depth
-    if score == -10:  # Other player wins
-        return score + depth
-    if not is_moves_left(board):  # Game is draw
+def get_available_moves(board):
+    # Finding all the empty spots on the board
+    # cuz we can't play where someone already played, duh!
+    moves = []
+    size = len(board)
+    for row in range(size):
+        for col in range(size):
+            if board[row][col] == ' ':
+                moves.append((row, col))
+    return moves
+
+def evaluate_board(board):
+    # The AI uses this to figure out if it's winning or losing
+    # +10 means AI is winning (woohoo!)
+    # -10 means humans are winning (boooo!)
+    # 0 means it's a draw (meh...)
+    if is_winner(board, 'O'):  # AI wins
+        return 10
+    elif is_winner(board, 'X'):  # First human wins
+        return -10
+    elif is_winner(board, 'Y'):  # Second human wins
+        return -10
+    else:  # Nobody's winning yet
         return 0
+
+def minimax(board, depth, is_maximizing, alpha, beta):
+    # This is the AI's brain - it's thinking really hard about its next move
+    # Don't worry if this looks like gibberish, it's just the AI being a smarty-pants
+    # It basically looks at all possible future moves and picks the best one
     
-    # If maximizing player's turn
-    if is_max:
-        best = float('-inf')
-        # Try all possible moves
-        for i in range(3):
-            for j in range(3):
-                if board[i][j] == EMPTY:
-                    # Make the move
-                    new_board = make_move(board, (i, j), PLAYERS[player_index])
-                    # Recursively find the best value
-                    best = max(best, minimax(new_board, depth + 1, 
-                                          player_index, False))
-        return best
+    score = evaluate_board(board)
     
-    # If minimizing player's turn
+    # If someone won or the board is full, we're done here
+    if score == 10 or score == -10:#base case#1 base#2
+        return score, None
+    
+    if not get_available_moves(board):
+        return 0, None#base case #3
+    
+    # If we've thought too many moves ahead, just stop
+    # cuz even AI gets tired sometimes
+    if depth == 0:#base case #4
+        return score, None
+    
+    moves = get_available_moves(board)
+    best_move = moves[0]
+    
+    if is_maximizing:  # AI's turn
+        best_score = float('-inf')  # Starting with the worst possible score
+        for move in moves:
+            row, col = move
+            board[row][col] = 'O'  # Try this move
+            current_score, _ = minimax(board, depth - 1, False, alpha, beta)#recusion being used here
+            board[row][col] = ' '  # Undo the move
+            
+            # If this move is better than our best so far, remember it
+            if current_score > best_score:
+                best_score = current_score
+                best_move = move
+            
+            # Some fancy optimization stuff... don't worry about it
+            alpha = max(alpha, best_score)#alpha cut off optimization
+            if beta <= alpha:
+                break
+        
+        return best_score, best_move
+    
+    else:  # Humans' turn
+        best_score = float('inf')  # Starting with the best possible score
+        for move in moves:
+            row, col = move
+            # Switching between X and Y for the two human players
+            player = 'X' if len(moves) % 2 == 0 else 'Y'
+            board[row][col] = player
+            current_score, _ = minimax(board, depth - 1, True, alpha, beta)#recusion being used
+            board[row][col] = ' '
+            
+            if current_score < best_score:
+                best_score = current_score
+                best_move = move
+            
+            beta = min(beta, best_score)
+            if beta <= alpha:
+                break
+        
+        return best_score, best_move
+
+def get_ai_move(board):
+    # This is where the AI actually decides what move to make
+    # For bigger boards, it doesn't think as many moves ahead
+    # cuz ain't nobody got time for that
+    size = len(board)
+    if size <= 3:
+        max_depth = 6  # For small boards, think harder
+    elif size <= 4:
+        max_depth = 4  # For medium boards, think less
     else:
-        best = float('inf')
-        next_player = (player_index + 1) % 3  # Get next player's index
-        # Try all possible moves
-        for i in range(3):
-            for j in range(3):
-                if board[i][j] == EMPTY:
-                    # Make the move
-                    new_board = make_move(board, (i, j), PLAYERS[next_player])
-                    # Recursively find the best value
-                    best = min(best, minimax(new_board, depth + 1, 
-                                          player_index, True))
-        return best
-
-def find_best_move(board, player_index):
-    """Find the best possible move for the current player"""
-    best_val = float('-inf')
-    best_move = (-1, -1)
+        max_depth = 3  # For big boards, just wing it
     
-    # Try all possible moves
-    for i in range(3):
-        for j in range(3):
-            if board[i][j] == EMPTY:
-                # Make the move
-                new_board = make_move(board, (i, j), PLAYERS[player_index])
-                # Calculate value of this move
-                move_val = minimax(new_board, 0, player_index, False)
-                
-                # Update best_move if this move is better
-                if move_val > best_val:
-                    best_move = (i, j)
-                    best_val = move_val
-    
-    return best_move
+    _, move = minimax(board, max_depth, True, float('-inf'), float('inf'))
+    return move
 
-def get_human_move(board):
-    """Get and validate human player's move"""
+def get_human_move(board, player):
+    # Getting input from the human players
+    # Keeps asking until they input something that actually makes sense
+    size = len(board)
     while True:
         try:
-            # Get row and column input from user
-            row = int(input("Enter row (0-2): "))
-            col = int(input("Enter column (0-2): "))
+            print(f"\nHey Player {player}, it's your turn!")
+            move = input("Where do you wanna go? Type row,column (like 1,1): ")
+            row, col = map(int, move.split(','))
             
-            # Check if move is valid
-            if is_valid_move(board, (row, col)):
-                return (row, col)
-            print("Invalid move, try again")
-        except ValueError:
-            print("Please enter numbers between 0 and 2")
+            # Check if the move is valid (on the board and empty)
+            if 0 <= row < size and 0 <= col < size and board[row][col] == ' ':
+                return row, col
+            else:
+                print("Uh oh, you can't go there! Try again...")
+        except (ValueError, IndexError):
+            print("Bruh... Type it like this: row,column (example: 1,1)")
 
-def play_game():
-    """Main game loop"""
-    board = create_board()  # Initialize empty board
-    current_player = 0  # Start with player X (human)
+def play_game(size=3):
+    # The main game loop - where all the magic happens!
+    board = create_board(size)
+    players = ['X', 'O', 'Y']  # X and Y are humans, O is the AI
+    current_player_index = 0
     
-    # Continue while there are moves left
-    while is_moves_left(board):
-        print(f"\nPlayer {PLAYERS[current_player]}'s turn")
+    print("\n=== Welcome to the coolest Tic-Tac-Toe ever! ===")
+    print("You're X, your friend is Y, and the AI is O")
+    print("Type moves like this: row,column (example: 1,1)")
+    
+    while True:
         print_board(board)
+        current_player = players[current_player_index]
         
-        # Get move based on player type (human or AI)
-        if current_player == 0:  # Human player
-            move = get_human_move(board)
-        else:  # AI players
-            move = find_best_move(board, current_player)
-            if move == (-1, -1):
-                print("Game Draw!")
-                return
+        # Get the next move
+        if current_player == 'O':
+            print("\nAI is thinking... 🤔")
+            row, col = get_ai_move(board)
+            print(f"AI drops an O at: {row},{col}")
+        else:
+            row, col = get_human_move(board, current_player)
         
         # Make the move
-        board = make_move(board, move, PLAYERS[current_player])
+        board[row][col] = current_player
         
-        # Check if current player won
-        if evaluate_board(board, current_player) == 10:
+        # Check if someone won
+        if is_winner(board, current_player):
             print_board(board)
-            print(f"\nPlayer {PLAYERS[current_player]} wins!")
-            return
+            if current_player == 'O':
+                print("The AI wins! The robots are taking over! 🤖")
+            else:
+                print(f"Player {current_player} wins! Time to celebrate! 🎉")
+            return min(size + 1, 8)  # Make the board bigger for next game
         
-        # Move to next player
-        current_player = (current_player + 1) % 3
-    
-    # If no moves left and no winner, it's a draw
-    print_board(board)
-    print("\nGame Draw!")
+        # Check if it's a tie
+        if not get_available_moves(board):
+            print_board(board)
+            print("It's a tie! Everyone's a winner! (sort of) 🤝")
+            return min(size + 1, 8)
+        
+        # Next player's turn
+        current_player_index = (current_player_index + 1) % len(players)
 
-# Start the game
+def main():
+    # This is where the party starts!
+    size = 3  # Starting with a classic 3x3 board
+    
+    while True:
+        size = play_game(size)
+        if size >= 8:
+            print("Wow, you've reached the maximum board size! You're a pro! 🏆")
+        
+        play_again = input("\nWanna play another round? (y/n): ").lower()
+        if play_again != 'y':
+            break
+
+    print("Thanks for playing! Come back soon! 👋")
+
+# This is where the magic begins when you run the file
 if __name__ == "__main__":
-    play_game()
+    main()``
