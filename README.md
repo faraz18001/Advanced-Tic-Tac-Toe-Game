@@ -61,6 +61,72 @@ Example move: `1,1` places your mark in the center
 4. Win by getting your marks in a line (horizontal, vertical, or diagonal)
 5. After each game, the board size increases by 1 (up to 8x8)
 
+## 🔄 Flow Diagrams
+
+### Game Flow
+```mermaid
+flowchart TD
+    A[Start Game] --> B[Create Empty Board]
+    B --> C[Initialize Players X, O, Y]
+    C --> D[Display Board]
+    D --> E{Current Player?}
+    E -->|AI Player O| F[Calculate AI Move using Minimax]
+    E -->|Human X or Y| G[Get Human Move Input]
+    F --> H[Update Board]
+    G --> H
+    H --> I{Check Winner?}
+    I -->|Yes| J[Display Winner]
+    I -->|No| K{Check Draw?}
+    K -->|Yes| L[Display Draw]
+    K -->|No| M[Switch to Next Player]
+    M --> D
+    J --> N{Board Size < 8?}
+    L --> N
+    N -->|Yes| O[Increase Board Size]
+    N -->|No| P[Maximum Size Message]
+    O --> Q{Play Again?}
+    P --> Q
+    Q -->|Yes| B
+    Q -->|No| R[End Game]
+```
+
+This diagram illustrates the complete game loop, showing how the program handles turns between human and AI players, checks for win conditions, and manages the dynamic board sizing feature.
+
+### Minimax Algorithm
+```mermaid
+flowchart TD
+    A[Start Minimax] --> B{Check Base Cases}
+    B -->|Winner Found| C[Return Score]
+    B -->|Board Full| D[Return 0]
+    B -->|Depth Limit| E[Return Current Score]
+    
+    B -->|Continue| F{Is Maximizing?}
+    
+    F -->|Yes| G[Initialize Best Score as -∞]
+    F -->|No| H[Initialize Best Score as +∞]
+    
+    G --> I[For each available move]
+    H --> I
+    
+    I --> J[Make Move]
+    J --> K[Recursive Minimax Call]
+    K --> L[Undo Move]
+    
+    L --> M{Better Score Found?}
+    M -->|Yes| N[Update Best Score & Move]
+    M -->|No| O[Continue to Next Move]
+    
+    N --> P{Alpha-Beta Cutoff?}
+    O --> P
+    
+    P -->|Yes| Q[Return Best Score & Move]
+    P -->|No| I
+    
+    Q --> R[End Minimax]
+```
+
+This flowchart details the implementation of the minimax algorithm with alpha-beta pruning, showing how the AI evaluates potential moves and makes decisions.
+
 ## 🧠 AI Implementation
 
 The AI opponent uses several sophisticated strategies:
