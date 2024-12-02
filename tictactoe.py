@@ -1,93 +1,103 @@
+import time
+import sys
+import os
+from colorama import init, Fore, Back, Style
 
-# It's like the regular game but with 3 players which makes it way more fun
-# The board size grows every time someone wins (until it hits 8x8) - pretty neat right?
+# Initialize colorama for cross-platform color support
+init()
+
+# Define color schemes for players and UI
+COLORS = {
+    'X': Fore.BLUE + Style.BRIGHT,
+    'O': Fore.RED + Style.BRIGHT,
+    'Y': Fore.GREEN + Style.BRIGHT,
+    'board': Fore.CYAN,
+    'header': Fore.YELLOW + Style.BRIGHT,
+    'error': Fore.RED + Style.BRIGHT,
+    'success': Fore.GREEN + Style.BRIGHT,
+    'prompt': Fore.MAGENTA + Style.BRIGHT
+}
+
+def clear_screen():
+    """Clear the console screen."""
+    os.system('cls' if os.name == 'nt' else 'clear')
 
 def create_board(size):
-    # Making an empty board... nothing fancy, just a bunch of spaces
-    # It's like setting up a blank canvas, but for X's and O's
-    board = []
-    for _ in range(size):#literally created a nested matrix here!.
-        row = []
-        for _ in range(size):
-            row.append(' ')
-        board.append(row)
-    return board
+    """Create an empty game board."""
+    return [[' ' for _ in range(size)] for _ in range(size)]
 
-def print_board(board):
-    # Printing out the board so humans can actually see what's going on
-    # Added column numbers at the top and row numbers on the side
-    # cuz nobody wants to count squares manually, right?
+def print_board_animated(board):
+    """Animated and colorful board printing."""
     size = len(board)
+    clear_screen()
     
-    # Print column numbers at the top
-    print("\n   ", end="")
+    # Print fancy header
+    print(COLORS['header'] + "\n=== SUPER TIC-TAC-TOE BATTLE ===")
+    print("=" * 35 + Style.RESET_ALL + "\n")
+    
+    # Print column numbers with animation
+    sys.stdout.write(COLORS['board'] + "   ")
     for col in range(size):
-        print(f"  {col} ", end="")
-    print("  (Columns)")
+        sys.stdout.write(f"  {col} ")
+        sys.stdout.flush()
+        time.sleep(0.05)
+    sys.stdout.write("  (Columns)\n")
     
-    # Print the separator line
-    print("   " + "----" * size)
+    # Print separator line
+    sys.stdout.write("   ")
+    for _ in range(size):
+        sys.stdout.write("----")
+        sys.stdout.flush()
+        time.sleep(0.02)
+    sys.stdout.write("\n")
     
-    # Print each row with row numbers
-    row_num = 0
-    for row in board:
-        print(f"{row_num} | ", end="")
+    # Print each row with colors and animation
+    for row_num, row in enumerate(board):
+        sys.stdout.write(COLORS['board'] + f"{row_num} |")
+        sys.stdout.flush()
+        time.sleep(0.05)
+        
         for cell in row:
-            print(f" {cell} |", end="")
-        print(f" (Row {row_num})")
-        print("   " + "----" * size)
-        row_num += 1
+            color = COLORS.get(cell, Fore.WHITE) if cell != ' ' else Fore.WHITE
+            sys.stdout.write(color + f" {cell} " + COLORS['board'] + "|")
+            sys.stdout.flush()
+            time.sleep(0.05)
+        
+        sys.stdout.write(f" (Row {row_num})\n")
+        
+        sys.stdout.write("   ")
+        for _ in range(size):
+            sys.stdout.write("----")
+            sys.stdout.flush()
+            time.sleep(0.02)
+        sys.stdout.write("\n")
+    
+    print(Style.RESET_ALL)
 
 def is_winner(board, player):
-    # Checking if someone won... boring but necessary
-    # Looking for three-in-a-row anywhere on the board
+    """Check if the given player has won."""
     size = len(board)
     
-    # Check rows - like reading a book left to right
+    # Check rows
     for row in range(size):
-        winner = True
-        for col in range(size):
-            if board[row][col] != player:
-                winner = False
-                break
-        if winner:
+        if all(board[row][col] == player for col in range(size)):
             return True
     
-    # Check columns - like reading a book top to bottom
+    # Check columns
     for col in range(size):
-        winner = True
-        for row in range(size):
-            if board[row][col] != player:
-                winner = False
-                break
-        if winner:
+        if all(board[row][col] == player for row in range(size)):
             return True
     
-    # Check diagonal from top-left to bottom-right
-    # Like drawing a line from your top-left pocket to your right shoe
-    winner = True
-    for i in range(size):
-        if board[i][i] != player:
-            winner = False
-            break
-    if winner:
+    # Check diagonals
+    if all(board[i][i] == player for i in range(size)):
         return True
-    
-    # Check diagonal from top-right to bottom-left
-    # Like drawing a line from your top-right pocket to your left shoe
-    winner = True
-    for i in range(size):
-        if board[i][size - 1 - i] != player:
-            winner = False
-            break
-    if winner:
+    if all(board[i][size-1-i] == player for i in range(size)):
         return True
     
     return False
 
 def get_available_moves(board):
-    # Finding all the empty spots on the board
-    # cuz we can't play where someone already played, duh!
+    """Find all empty spots on the board."""
     moves = []
     size = len(board)
     for row in range(size):
@@ -97,69 +107,52 @@ def get_available_moves(board):
     return moves
 
 def evaluate_board(board):
-    # The AI uses this to figure out if it's winning or losing
-    # +10 means AI is winning (woohoo!)
-    # -10 means humans are winning (boooo!)
-    # 0 means it's a draw (meh...)
+    """Evaluate the board state for minimax."""
     if is_winner(board, 'O'):  # AI wins
         return 10
-    elif is_winner(board, 'X'):  # First human wins
+    elif is_winner(board, 'X') or is_winner(board, 'Y'):  # Humans win
         return -10
-    elif is_winner(board, 'Y'):  # Second human wins
-        return -10
-    else:  # Nobody's winning yet
+    else:  # Draw
         return 0
 
 def minimax(board, depth, is_maximizing, alpha, beta):
-    # This is the AI's brain - it's thinking really hard about its next move
-    # Don't worry if this looks like gibberish, it's just the AI being a smarty-pants
-    # It basically looks at all possible future moves and picks the best one
-    
+    """Implement minimax algorithm with alpha-beta pruning."""
     score = evaluate_board(board)
     
-    # If someone won or the board is full, we're done here
-    if score == 10 or score == -10:#base case#1 base#2
-        return score, None
-    
-    if not get_available_moves(board):
-        return 0, None#base case #3
-    
-    # If we've thought too many moves ahead, just stop
-    # cuz even AI gets tired sometimes
-    if depth == 0:#base case #4
+    if score == 10 or score == -10 or depth == 0:
         return score, None
     
     moves = get_available_moves(board)
+    if not moves:
+        return 0, None
+    
     best_move = moves[0]
     
-    if is_maximizing:  # AI's turn
-        best_score = float('-inf')  # Starting with the worst possible score
+    if is_maximizing:
+        best_score = float('-inf')
         for move in moves:
             row, col = move
-            board[row][col] = 'O'  # Try this move
-            current_score, _ = minimax(board, depth - 1, False, alpha, beta)#recusion being used here
-            board[row][col] = ' '  # Undo the move
+            board[row][col] = 'O'
+            current_score, _ = minimax(board, depth - 1, False, alpha, beta)
+            board[row][col] = ' '
             
-            # If this move is better than our best so far, remember it
             if current_score > best_score:
                 best_score = current_score
                 best_move = move
             
-            # Some fancy optimization stuff... don't worry about it
-            alpha = max(alpha, best_score)#alpha cut off optimization
+            alpha = max(alpha, best_score)
             if beta <= alpha:
                 break
         
         return best_score, best_move
     
-    else:  # Humans' turn
-        best_score = float('inf')  # Starting with the best possible score
+    else:
+        best_score = float('inf')
         for move in moves:
             row, col = move
-            # Switching between X and Y for the two human players
             player = 'X' if len(moves) % 2 == 0 else 'Y'
             board[row][col] = player
-            current_score, _ = minimax(board, depth - 1, True, alpha, beta)#recusion being used
+            current_score, _ = minimax(board, depth - 1, True, alpha, beta)
             board[row][col] = ' '
             
             if current_score < best_score:
@@ -173,96 +166,84 @@ def minimax(board, depth, is_maximizing, alpha, beta):
         return best_score, best_move
 
 def get_ai_move(board):
-    # This is where the AI actually decides what move to make
-    # For bigger boards, it doesn't think as many moves ahead
-    # cuz ain't nobody got time for that
+    """Get AI move using minimax algorithm."""
     size = len(board)
-    if size <= 3:
-        max_depth = 6  # For small boards, think harder
-    elif size <= 4:
-        max_depth = 4  # For medium boards, think less
-    else:
-        max_depth = 3  # For big boards, just wing it
-    
+    max_depth = 6 if size <= 3 else 4 if size <= 4 else 3
     _, move = minimax(board, max_depth, True, float('-inf'), float('inf'))
     return move
 
 def get_human_move(board, player):
-    # Getting input from the human players
-    # Keeps asking until they input something that actually makes sense
+    """Get and validate human player's move with colored prompts."""
     size = len(board)
     while True:
         try:
-            print(f"\nHey Player {player}, it's your turn!")
-            move = input("Where do you wanna go? Type row,column (like 1,1): ")
+            print(COLORS[player] + f"\n🎮 Player {player}'s turn!" + Style.RESET_ALL)
+            print(COLORS['prompt'] + "Enter your move (row,column) like 1,1: " + Style.RESET_ALL, end='')
+            move = input()
             row, col = map(int, move.split(','))
             
-            # Check if the move is valid (on the board and empty)
             if 0 <= row < size and 0 <= col < size and board[row][col] == ' ':
                 return row, col
             else:
-                print("Uh oh, you can't go there! Try again...")
+                print(COLORS['error'] + "⚠️  Oops! That spot is either taken or out of bounds!" + Style.RESET_ALL)
         except (ValueError, IndexError):
-            print("Bruh... Type it like this: row,column (example: 1,1)")
+            print(COLORS['error'] + "❌ Please use the format: row,column (example: 1,1)" + Style.RESET_ALL)
 
 def play_game(size=3):
-    # The main game loop - where all the magic happens!
+    """Main game loop with colorful interface."""
     board = create_board(size)
-    players = ['X', 'O', 'Y']  # X and Y are humans, O is the AI
+    players = ['X', 'O', 'Y']
     current_player_index = 0
     
-    print("\n=== Welcome to the coolest Tic-Tac-Toe ever! ===")
-    print("You're X, your friend is Y, and the AI is O")
-    print("Type moves like this: row,column (example: 1,1)")
+    # Welcome message
+    print(COLORS['header'] + "\n🎮 Welcome to SUPER TIC-TAC-TOE! 🎮")
+    print("X=Blue, O=Red (AI), Y=Green")
+    print("Make moves like this: row,column (example: 1,1)" + Style.RESET_ALL)
+    time.sleep(2)
     
     while True:
-        print_board(board)
+        print_board_animated(board)
         current_player = players[current_player_index]
         
-        # Get the next move
-        if current_player == 'O':
-            print("\nAI is thinking... 🤔")
+        if current_player == 'O':  # AI's turn
+            print(COLORS['O'] + "\n🤖 AI is calculating its master move..." + Style.RESET_ALL)
+            time.sleep(1)
             row, col = get_ai_move(board)
-            print(f"AI drops an O at: {row},{col}")
+            print(COLORS['O'] + f"🎯 AI chose: {row},{col}" + Style.RESET_ALL)
         else:
             row, col = get_human_move(board, current_player)
         
-        # Make the move
         board[row][col] = current_player
         
-        # Check if someone won
         if is_winner(board, current_player):
-            print_board(board)
+            print_board_animated(board)
             if current_player == 'O':
-                print("The AI wins! The robots are taking over! 🤖")
+                print(COLORS['O'] + "\n🤖 The AI emerges victorious! The machines are rising! 🤖" + Style.RESET_ALL)
             else:
-                print(f"Player {current_player} wins! Time to celebrate! 🎉")
-            return min(size + 1, 8)  # Make the board bigger for next game
-        
-        # Check if it's a tie
-        if not get_available_moves(board):
-            print_board(board)
-            print("It's a tie! Everyone's a winner! (sort of) 🤝")
+                print(COLORS[current_player] + f"\n🎉 Player {current_player} wins! Time to celebrate! 🎊" + Style.RESET_ALL)
             return min(size + 1, 8)
         
-        # Next player's turn
+        if not get_available_moves(board):
+            print_board_animated(board)
+            print(COLORS['header'] + "\n🤝 It's a tie! Everyone's a winner! 🤝" + Style.RESET_ALL)
+            return min(size + 1, 8)
+        
         current_player_index = (current_player_index + 1) % len(players)
 
 def main():
-    # This is where the party starts!
-    size = 3  # Starting with a classic 3x3 board
+    """Main function with colorful game flow."""
+    size = 3
     
     while True:
         size = play_game(size)
         if size >= 8:
-            print("Wow, you've reached the maximum board size! You're a pro! 🏆")
+            print(COLORS['success'] + "\n🏆 Incredible! You've reached the maximum board size! 🏆" + Style.RESET_ALL)
         
-        play_again = input("\nWanna play another round? (y/n): ").lower()
-        if play_again != 'y':
+        print(COLORS['prompt'] + "\nWant to play another round? (y/n): " + Style.RESET_ALL, end='')
+        if input().lower() != 'y':
             break
 
-    print("Thanks for playing! Come back soon! 👋")
+    print(COLORS['header'] + "\n👋 Thanks for playing! Come back soon! 👋" + Style.RESET_ALL)
 
-# This is where the magic begins when you run the file
 if __name__ == "__main__":
-    main()``
+    main()
