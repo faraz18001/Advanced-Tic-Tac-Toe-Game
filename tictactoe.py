@@ -11,8 +11,8 @@ COLORS = {
     'X': Fore.BLUE + Style.BRIGHT,
     'O': Fore.RED + Style.BRIGHT,
     'Y': Fore.GREEN + Style.BRIGHT,
-    'board': Fore.CYAN,
-    'header': Fore.YELLOW + Style.BRIGHT,
+    'board': Fore.WHITE,
+    'header': Fore.WHITE + Style.NORMAL,
     'error': Fore.RED + Style.BRIGHT,
     'success': Fore.GREEN + Style.BRIGHT,
     'prompt': Fore.MAGENTA + Style.BRIGHT
@@ -23,8 +23,15 @@ def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
 
 def create_board(size):
-    """Create an empty game board."""
-    return [[' ' for _ in range(size)] for _ in range(size)]
+    # Making an empty board... nothing fancy, just a bunch of spaces
+    # It's like setting up a blank canvas, but for X's and O's
+    board = []
+    for _ in range(size):#literally created a nested matrix here!.
+        row = []
+        for _ in range(size):
+            row.append(' ')
+        board.append(row)
+    return board
 
 def print_board_animated(board):
     """Animated and colorful board printing."""
@@ -33,7 +40,7 @@ def print_board_animated(board):
     
     # Print fancy header
     print(COLORS['header'] + "\n=== SUPER TIC-TAC-TOE BATTLE ===")
-    print("=" * 35 + Style.RESET_ALL + "\n")
+    #print("=" * 35 + Style.RESET_ALL + "\n")
     
     # Print column numbers with animation
     sys.stdout.write(COLORS['board'] + "   ")
@@ -75,23 +82,48 @@ def print_board_animated(board):
     print(Style.RESET_ALL)
 
 def is_winner(board, player):
-    """Check if the given player has won."""
+    # Checking if someone won... boring but necessary
+    # Looking for three-in-a-row anywhere on the board
     size = len(board)
     
-    # Check rows
+    # Check rows - like reading a book left to right
     for row in range(size):
-        if all(board[row][col] == player for col in range(size)):
+        winner = True
+        for col in range(size):
+            if board[row][col] != player:
+                winner = False
+                break
+        if winner:
             return True
     
-    # Check columns
+    # Check columns - like reading a book top to bottom
     for col in range(size):
-        if all(board[row][col] == player for row in range(size)):
+        winner = True
+        for row in range(size):
+            if board[row][col] != player:
+                winner = False
+                break
+        if winner:
             return True
     
-    # Check diagonals
-    if all(board[i][i] == player for i in range(size)):
+    # Check diagonal from top-left to bottom-right
+    # Like drawing a line from your top-left pocket to your right shoe
+    winner = True
+    for i in range(size):
+        if board[i][i] != player:
+            winner = False
+            break
+    if winner:
         return True
-    if all(board[i][size-1-i] == player for i in range(size)):
+    
+    # Check diagonal from top-right to bottom-left
+    # Like drawing a line from your top-right pocket to your left shoe
+    winner = True
+    for i in range(size):
+        if board[i][size - 1 - i] != player:
+            winner = False
+            break
+    if winner:
         return True
     
     return False
@@ -107,16 +139,21 @@ def get_available_moves(board):
     return moves
 
 def evaluate_board(board):
-    """Evaluate the board state for minimax."""
+    # The AI uses this to figure out if it's winning or losing
+    # +10 means AI is winning (woohoo!)
+    # -10 means humans are winning (boooo!)
+    # 0 means it's a draw (meh...)
     if is_winner(board, 'O'):  # AI wins
         return 10
-    elif is_winner(board, 'X') or is_winner(board, 'Y'):  # Humans win
+    elif is_winner(board, 'X'):  # First human wins
         return -10
-    else:  # Draw
+    elif is_winner(board, 'Y'):  # Second human wins
+        return -10
+    else:  # Nobody's winning yet
         return 0
 
-def minimax(board, depth, is_maximizing, alpha, beta):
-    """Implement minimax algorithm with alpha-beta pruning."""
+def minimax(board, depth, is_maximizing):
+
     score = evaluate_board(board)
     
     if score == 10 or score == -10 or depth == 0:
@@ -133,16 +170,16 @@ def minimax(board, depth, is_maximizing, alpha, beta):
         for move in moves:
             row, col = move
             board[row][col] = 'O'
-            current_score, _ = minimax(board, depth - 1, False, alpha, beta)
+            current_score, _ = minimax(board, depth - 1, False)
             board[row][col] = ' '
             
             if current_score > best_score:
                 best_score = current_score
                 best_move = move
             
-            alpha = max(alpha, best_score)
-            if beta <= alpha:
-                break
+            #alpha = max(alpha, best_score)
+            #if beta <= alpha:
+               # break
         
         return best_score, best_move
     
@@ -152,24 +189,32 @@ def minimax(board, depth, is_maximizing, alpha, beta):
             row, col = move
             player = 'X' if len(moves) % 2 == 0 else 'Y'
             board[row][col] = player
-            current_score, _ = minimax(board, depth - 1, True, alpha, beta)
+            current_score, _ = minimax(board, depth - 1, True)
             board[row][col] = ' '
             
             if current_score < best_score:
                 best_score = current_score
                 best_move = move
             
-            beta = min(beta, best_score)
-            if beta <= alpha:
-                break
+            #beta = min(beta, best_score)
+            #if beta <= alpha:
+                #break
         
         return best_score, best_move
 
 def get_ai_move(board):
-    """Get AI move using minimax algorithm."""
+    # This is where the AI actually decides what move to make
+    # For bigger boards, it doesn't think as many moves ahead
+    # cuz ain't nobody got time for that
     size = len(board)
-    max_depth = 6 if size <= 3 else 4 if size <= 4 else 3
-    _, move = minimax(board, max_depth, True, float('-inf'), float('inf'))
+    if size <= 3:
+        max_depth = 6  # For small boards, think harder
+    elif size <= 4:
+        max_depth = 4  # For medium boards, think less
+    else:
+        max_depth = 3  # For big boards, just wing it
+    
+    _, move = minimax(board, max_depth, True)
     return move
 
 def get_human_move(board, player):
