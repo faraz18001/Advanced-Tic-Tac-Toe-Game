@@ -2,6 +2,7 @@ import time
 import sys
 import os
 from colorama import init, Fore, Back, Style
+import pandas as pd
 
 # Initialize colorama for cross-platform color support
 init()
